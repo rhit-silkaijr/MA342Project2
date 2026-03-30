@@ -2,48 +2,55 @@ function [t, X] = CloudModelSimple()
     maxTime = 100; % mystical time units
     tau = 2; % delay for information to travel in time units
     lags = [tau, 2*tau]; 
-    history = [100; 10; 30]; % starting point
 
     % define task inputs to the system
     t_data = 0:1:maxTime; 
-    numComputers = 3;
+    numComputers = 4;
 
-    r_data = zeros(4,maxTime+1);
+    r_data = zeros(numComputers,maxTime+1);
 
     %Must manually input functions anyway, so don't factor in num_computers here
+    history = [100; 10; 30; 50]; % starting point
     r_data(1,:) = 5*(sin(t_data)+1);
     r_data(2,:) = linspace(2, 10, length(t_data)); 
     r_data(3,:) = 5*(cos(t_data)+1);
+    r_data(4,:) = linspace(7, 2, length(t_data));
     
-    sol = dde23(@(t,X,Xdel) calcDX(t, X, Xdel, t_data, r_data), lags, history, [0, maxTime]);
+    sol = dde23(@(t,X,Xdel) calcDX(t, X, Xdel, t_data, r_data,numComputers), lags, history, [0, maxTime]);
     
     % Plot results
     figure;
     subplot(2,1,1);
     hold on
-    plot(sol.x, sol.y(1,:), 'b'); 
-    plot(sol.x, sol.y(2,:), 'r');
-    plot(sol.x, sol.y(3,:), 'g');
-    legend('C1 Load', 'C2 Load', 'C3 Load'); 
+    for i=1:numComputers
+        plot(sol.x, sol.y(i,:));
+    end
+    legend('C1 Load', 'C2 Load', 'C3 Load', 'C4 Load'); 
     
     subplot(2,1,2);
-    plot(t_data, r_data(1,:), 'b--', t_data, r_data(2,:), 'r--', t_data, r_data(3,:), 'g--');
-    legend('C1 Input (r1)', 'C2 Input (r2)', 'C3 Input (r3)');
+    hold on
+    for i=1:numComputers
+        plot(t_data, r_data(i,:));
+    end
+    legend('C1 Input (r1)', 'C2 Input (r2)', 'C3 Input (r3)', 'C4 Input (r4)');
 end
 
-function dX = calcDX(t, X, Xdel, t_data, r_data)
+function dX = calcDX(t, X, Xdel, t_data, r_data, numComputers)
     % interpolate for tasks into system at any given time
-    r1 = interp1(t_data, r_data(1,:), t);
-    r2 = interp1(t_data, r_data(2,:), t);
-    r3 = interp1(t_data, r_data(3,:), t);
-    
-    r = [r1 r2 r3];
-    c = [7; 7; 7]; % rate each computer can complete tasks
+
+    r = zeros(numComputers,1);
+
+    for i=1:numComputers
+        r(i,:) = interp1(t_data, r_data(i,:), t);
+    end
+
+    %Manually input c for each computer
+    c = [7; 7; 7; 7]; % rate each computer can complete tasks
     a = 1; % aggressiveness of sending tasks
     
-    dX = zeros(3,1);
+    dX = zeros(numComputers,1);
 
-    for i=1:length(dX)
+    for i=1:numComputers
         dX(i) = calcWork(c, X, Xdel, i, r, a);
     end
     
