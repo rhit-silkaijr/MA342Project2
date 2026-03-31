@@ -26,17 +26,23 @@ function [t, X] = CloudModelDynamic()
     % Plot results
     figure;
     subplot(2,1,1);
+    legend_names = [];
     hold on
-    for i = 1:length(r(:,1))
-        plot(sol.x, sol.y(i,:)); 
+    for i=1:number_of_computers
+        plot(sol.x, sol.y(i,:));
+        legend_names = [legend_names, sprintf("C%.0f Load", i)];
+        % add legend based on i 
     end
+    legend(legend_names); 
     
     subplot(2,1,2);
+    legend_names = [];
     hold on
-    for i = 1:length(r(:,1))
+    for i=1:number_of_computers
         plot(t_data, r(i,:));
+        legend_names = [legend_names, sprintf("C%.0f Input (r%.0f Input)", i, i)];
     end
-    plot(t_data, sum(r, 1), 'k--', 'MarkerSize', 3)
+    legend(legend_names);
 end
 
 function dX = calcDX(t, X, Xdel, t_data, r, tau, compute_speed)    
@@ -45,13 +51,11 @@ function dX = calcDX(t, X, Xdel, t_data, r, tau, compute_speed)
     dX = zeros(length(c),1);
     
     % connect all computers to all other computers
-    output_connections = zeros(length(c), length(c)-1);
+    output_connections = zeros(length(c), length(c));
     for row = 1:length(c)
-        index = 1;
         for col = 1:length(c)
             if col ~= row
-                output_connections(row, index) = col;
-                index = index + 1;
+                output_connections(row, col) = 1;
             end
         end
     end
@@ -81,7 +85,12 @@ function distribution = calc_sends(output_connections, time1, time0, compute_spe
         % get total tasks of self and computers able to be sent to with tasks <= self
         total = time1(i1);
         num_avail = 1;
-        targets = output_connections(i1,:);
+        targets = [];
+        for j = 1:length(output_connections)
+            if output_connections(i1,j) == 1
+                targets = [targets j];
+            end
+        end
         for i2 = 1:length(targets) % loop through all available send locations
             if time0(targets(i2)) <= time1(i1) % only include in average if <= self
                 total = total + time0(targets(i2));
