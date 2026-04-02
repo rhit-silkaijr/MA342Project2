@@ -60,9 +60,14 @@ function dX = calcDX(t, X, Xdel, t_data, r, tau, compute_speed)
         end
     end
 
+    % account for limited processing power, computer can send 10 tasks
+    % or compute 1 on its own (send is capped in calc_seeds)
+    % 10 is an arbitrary input
+    tasks_sent_per_one_computed = 10;
+
     % calculate tasks to send and receive for now, and from tau ago
-    distribution_current = calc_sends(output_connections, X, Xdel(:, 1), compute_speed, r, tau);
-    distribution_previous = calc_sends(output_connections, Xdel(:, 1), Xdel(:, 2), compute_speed, r, tau);
+    distribution_current = calc_sends(output_connections, X, Xdel(:, 1), compute_speed, r, tau, tasks_sent_per_one_computed);
+    distribution_previous = calc_sends(output_connections, Xdel(:, 1), Xdel(:, 2), compute_speed, r, tau, tasks_sent_per_one_computed);
 
     for i = 1:length(c)
         new_tasks_in = interp1(t_data, r(i,:), t);
@@ -70,12 +75,15 @@ function dX = calcDX(t, X, Xdel, t_data, r, tau, compute_speed)
         tasks_sent = sum(distribution_current(i, :));
         tasks_received = sum(distribution_previous(:, i));
 
+        % factor in limited processing power
+        work = min(work, c(i) - round(tasks_sent/tasks_sent_per_one_computed));
+
         % total
         dX(i) = new_tasks_in - work - tasks_sent + tasks_received;
     end
 end
 
-function distribution = calc_sends(output_connections, time1, time0, compute_speed, r, tau)
+function distribution = calc_sends(output_connections, time1, time0, compute_speed, r, tau, tasks_sent_per_one_computed)
 
     number_of_computers = length(output_connections(:,1));
 
@@ -115,6 +123,11 @@ function distribution = calc_sends(output_connections, time1, time0, compute_spe
         % compute on its own, if so, replace with 0
         if sum(distribution(i1,:)) <= compute_speed * a
             distribution(i1,:) = 0;
+        end
+
+        while sum(distribution(i1,:)) > compute_speed * tasks_sent_per_one_computed
+            distribution(i1,:) = distribution(i1,:)-1;
+            fprintf('Warning: computer %2.0f is hitting the bandwidth cap with %f.0 total tasks.\n', i1, time0(i1));
         end
 
     end
