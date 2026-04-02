@@ -1,6 +1,6 @@
 function [t, X] = CloudModelDynamic()
     maxTime = 1000; % mystical time units
-    tau = 3; % delay for information to travel in time units
+    tau = 2; % delay for information to travel in time units
     lags = [tau, 2*tau]; 
     compute_speed = 10; % tasks per time unit
 
@@ -20,6 +20,12 @@ function [t, X] = CloudModelDynamic()
     r(6,:) = 10*ones(size(t_data));
     r(7,:) = 10*ones(size(t_data));
     r(8,:) = 10*ones(size(t_data));
+    
+    % r(:,maxTime/4:maxTime/4+maxTime/20) = 3*r(:,maxTime/4:maxTime/4+maxTime/20);
+    % r(:,3*maxTime/4:3*maxTime/4+3*maxTime/20) = 4*r(:,3*maxTime/4:3*maxTime/4+3*maxTime/20);
+    % r(:,7*maxTime/8:maxTime) = .1*r(:,7*maxTime/8:maxTime);
+
+    %r(7,501:1001) = zeros(501,1);
     
     sol = dde23(@(t,X,Xdel) calcDX(t, X, Xdel, t_data, r, tau, compute_speed), lags, history, [0, maxTime]);
     
@@ -108,8 +114,7 @@ function distribution = calc_sends(output_connections, time1, time0, compute_spe
         end
 
         % vary a to handle spikes of tasks efficienctly
-        %a = (tau / (3*length(r(:,1)))) * exp(min(max((time1(i1) - (total - time1(i1))) / 300, 0), 5)); % idk man, change these values to do some stuff
-        a = .1; % between 0 and 1
+        a = min(1, (1 / (tau*length(r(:,1))))) * exp(min(max((time1(i1) - (total - time1(i1))) / 300, 0), 7));
 
         % compute ideal spread of tasks
         goal = total / num_avail;
