@@ -1,6 +1,6 @@
 function [t, X] = CloudModelDynamic()
     maxTime = 1000; % mystical time units
-    tau = 2; % delay for information to travel in time units
+    tau = 3; % delay for information to travel in time units
     lags = [tau, 2*tau]; 
     compute_speed = 10; % tasks per time unit
 
@@ -51,6 +51,7 @@ function dX = calcDX(t, X, Xdel, t_data, r, tau, compute_speed)
     dX = zeros(length(c),1);
     
     % connect all computers to all other computers
+    % send to rows, receive from columns
     output_connections = zeros(length(c), length(c));
     for row = 1:length(c)
         for col = 1:length(c)
@@ -107,7 +108,8 @@ function distribution = calc_sends(output_connections, time1, time0, compute_spe
         end
 
         % vary a to handle spikes of tasks efficienctly
-        a = (tau / (3*length(r(:,1)))) * exp(min(max((time1(i1) - (total - time1(i1))) / 300, 0), 5)); % idk man, change these values to do some stuff
+        %a = (tau / (3*length(r(:,1)))) * exp(min(max((time1(i1) - (total - time1(i1))) / 300, 0), 5)); % idk man, change these values to do some stuff
+        a = .1; % between 0 and 1
 
         % compute ideal spread of tasks
         goal = total / num_avail;
@@ -127,7 +129,7 @@ function distribution = calc_sends(output_connections, time1, time0, compute_spe
 
         while sum(distribution(i1,:)) > compute_speed * tasks_sent_per_one_computed
             distribution(i1,:) = distribution(i1,:)-1;
-            fprintf('Warning: computer %2.0f is hitting the bandwidth cap with %f.0 total tasks.\n', i1, time0(i1));
+            %fprintf('Warning: computer %2.0f is hitting the bandwidth cap with %f.0 total tasks.\n', i1, time0(i1));
         end
 
     end
